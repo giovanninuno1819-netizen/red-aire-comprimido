@@ -1,7 +1,6 @@
 import pandas as pd
-import json
-import os
-
+import numpy as np
+import networkx as nx
 class LectorRed:
     def __init__(self, ruta_materiales="materiales.json"):
         """Inicializa el lector cargando el catálogo maestro de materiales."""
