@@ -1,0 +1,23 @@
+{
+  "ACERO CS C40": {
+    "rugosidad_mm": 0.05,
+    "diametros": {
+      "0.5": {"ext_mm": 21.3, "int_mm": 15.76},
+      "0.75": {"ext_mm": 26.7, "int_mm": 20.93},
+      "1.0": {"ext_mm": 33.4, "int_mm": 26.64},
+      "1.25": {"ext_mm": 42.2, "int_mm": 35.05},
+      "1.5": {"ext_mm": 48.3, "int_mm": 40.94},
+      "2.0": {"ext_mm": 60.3, "int_mm": 52.51}
+    }
+  },
+  "ALUMINIO C40": {
+    "rugosidad_mm": 0.007,
+    "diametros": {
+      "0.5": {"ext_mm": 21.3, "int_mm": 15.76},
+      "0.75": {"ext_mm": 26.7, "int_mm": 20.93},
+      "1.0": {"ext_mm": 33.4, "int_mm": 26.64},
+      "1.5": {"ext_mm": 48.3, "int_mm": 40.94},
+      "2.0": {"ext_mm": 60.3, "int_mm": 52.51}
+    }
+  }
+}
