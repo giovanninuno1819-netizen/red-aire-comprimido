@@ -1,0 +1,104 @@
+import streamlit as st
+import pandas as pd
+import os
+
+# Importar los módulos modulares que guardamos en la carpeta src
+from src.lector import LectorRed
+from src.motor_calculo import MotorNeumatico
+from src.graficador import GraficadorRed
+from src.reportero_pdf import ReporteroPDF
+
+# Configuración de la página web de Streamlit
+st.set_page_config(
+    page_title="Calculadora de Redes de Aire Comprimido",
+    page_icon="💨",
+    layout="wide"
+)
+
+st.title("💨 Sistema Automatizado de Ingeniería: Redes de Aire Comprimido")
+st.markdown("""
+Esta plataforma analiza topologías de redes industriales (Loops, Ramales y Derivaciones), balancea caudales aguas arriba 
+y calcula las pérdidas de carga exactas mediante las ecuaciones iterativas de **Colebrook-White** extraídas de tus memorias de diseño.
+""")
+
+st.sidebar.header("🛠️ Configuración General")
+
+# Parámetros globales basados en tus Datos Generales de Diseño
+presion_op = st.sidebar.slider("Presión de Operación (bar)", min_value=1.0, max_value=12.0, value=6.0, step=0.5)
+temperatura_op = st.sidebar.slider("Temperatura de Operación (°C)", min_value=5.0, max_value=50.0, value=20.0, step=1.0)
+
+st.sidebar.markdown("---")
+st.sidebar.markdown("### 📊 Archivos de Soporte")
+st.sidebar.info("Asegúrate de que tu Excel contenga las pestañas obligatorias: `Estructura_Red` y `Puntos_Consumo`.")
+
+# 1. Zona de carga de archivos (Uploader)
+archivo_excel = st.file_uploader("📂 Sube la plantilla de Excel de la Red Neumática", type=["xlsx"])
+
+if archivo_excel is not None:
+    try:
+        # Inicializar los módulos del sistema
+        lector = LectorRed(ruta_materiales="materiales.json")
+        motor = MotorNeumatico(presion_operacion_bar=presion_op, temperatura_c=temperatura_op)
+        graficador = GraficadorRed(carpeta_salida="output")
+        reportero = ReporteroPDF(carpeta_salida="output")
+        
+        with st.spinner("Procesando topología de red y ejecutando Colebrook-White..."):
+            # Paso A: Cargar y validar estructura
+            df_tramos, df_consumos = lector.cargar_y_validar_excel(archivo_excel)
+            
+            # Paso B: Calcular hidráulica/neumática por grafos
+            df_resultados = motor.calcular_red(df_tramos, df_consumos)
+            
+            # Paso C: Generar gráficas de soporte
+            rutas_imagenes = graficador.generar_graficas_reporte(df_resultados)
+            
+            # Paso D: Generar el Reporte Ejecutivo en PDF
+            ruta_pdf = reportero.generar_reporte_pdf(df_resultados, rutas_imagenes)
+            
+        st.success("✅ ¡Cálculos completados y validados con éxito!")
+        
+        # --- DISEÑO DE PANELES EN LA INTERFAZ ---
+        tab1, tab2, tab3 = st.tabs(["📋 Resultados por Tramo", "📈 Gráficas de Desempeño", "🖨️ Reporte Ejecutivo"])
+        
+        with tab1:
+            st.subheader("Análisis de Flujo y Diámetros Comerciales")
+            st.markdown("Revisión de velocidades reales contra el límite crítico de **10 m/s**.")
+            
+            # Dar formato estético a la tabla de visualización en la web
+            df_mostrar = df_resultados.copy()
+            df_mostrar["Caudal_Nm3h"] = df_mostrar["Caudal_Nm3h"].map("{:.2f}".format)
+            df_mostrar["Velocidad_ms"] = df_mostrar["Velocidad_ms"].map("{:.2f}".format)
+            df_mostrar["Perdida_Carga_bar"] = df_mostrar["Perdida_Carga_bar"].map("{:.4f}".format)
+            
+            st.dataframe(df_mostrar, use_container_width=True)
+            
+        with tab2:
+            st.subheader("Visualizaciones de Ingeniería")
+            col1, col2 = st.columns(2)
+            with col1:
+                if "velocidades" in rutas_imagenes:
+                    st.image(rutas_imagenes["velocidades"], caption="Perfil de Velocidades por Tramo.")
+            with col2:
+                if "perdidas" in rutas_imagenes:
+                    st.image(rutas_imagenes["perdidas"], caption="Pérdidas de Presión Estimadas.")
+                    
+        with tab3:
+            st.subheader("Descarga de Documentación Formal")
+            st.markdown("El sistema ha compilado una memoria de cálculo técnica que incluye la marca de agua institucional si el logotipo está cargado.")
+            
+            # Botón de descarga nativo de Streamlit para el PDF
+            if os.path.exists(ruta_pdf):
+                with open(ruta_pdf, "rb") as f:
+                    st.download_button(
+                        label="📥 Descargar Reporte Técnico en PDF",
+                        data=f,
+                        file_name="Memoria_Calculo_Red_Aire.pdf",
+                        mime="application/pdf"
+                    )
+            else:
+                st.error("No se pudo consolidar el archivo de salida PDF.")
+                
+    except Exception as e:
+        st.error(f"❌ Ocurrió un error al procesar el archivo: {e}")
+else:
+    st.warning("📥 Por favor, carga un archivo de Excel válido para iniciar el modelado neumático de la planta.")
